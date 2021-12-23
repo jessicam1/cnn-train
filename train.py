@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-from Fast5Fetch.Fast5Data_dev import train_val_split
-from Fast5Fetch.Fast5Data_dev import data_generation
-# from Fast5Fetch.Fast5Data_dev import SampleGeneratorFromFiles
+from Fast5Fetch.Fast5Data import train_val_split
+from Fast5Fetch.Fast5Data import data_generation
 import random
 import numpy as np
 import tensorflow as tf
