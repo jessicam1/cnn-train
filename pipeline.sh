@@ -1,6 +1,6 @@
 #/bin/bash
 
-model="neuralnets/mycnn/models/test07skew" 
+model="neuralnets/mycnn/models/4kseq_short_model300k" 
 mkdir -p "$model"
 logsdir="neuralnets/mycnn/tblogs/"
 mkdir -p "$logsdir"
@@ -24,9 +24,10 @@ python neuralnets/src/train.py \
 	--model $model \
 	--posdirs $pos_dirs \
 	--negdirs $neg_dirs \
-	--trainreads 50000 \
+	--trainreads 300000 \
 	--valreads 10000 \
-	--ratio 0.7 \
+	--window 4000 \
+	--ratio 0.3 \
 	--threshold 0.5 \
 	--batchsize 32 \
 	--gpulim 4096 \

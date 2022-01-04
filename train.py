@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from Fast5Fetch.Fast5Data import train_val_split
+from Fast5Fetch.Fast5Data import train_test_val_split
 from Fast5Fetch.Fast5Data import data_generation
 import random
 import numpy as np
@@ -14,6 +14,7 @@ parser.add_argument("-p", "--posdirs", required=True, nargs='+', help="fast5 dir
 parser.add_argument("-n", "--negdirs", nargs='+', help="fast5 directory containing negative label samples")
 parser.add_argument("--trainreads", required=True, type=int, help="number of reads to use for training")
 parser.add_argument("--valreads", required=True, type=int, help="number of reads to use for validation")
+parser.add_argument("-w", "--window", required=True, type=int, help="size of window for signal sampling")
 parser.add_argument("-r", "--ratio", type=float, default=0.5, help="ratio of positive to negative reads during training")
 parser.add_argument("-t", "--threshold", type=float, default=0.5, help="sigmoid threshold value, default is 0.5")
 parser.add_argument("-b", "--batchsize", type=int, default=32, help="number of reads to use in a training batch; default is 32") 
@@ -43,20 +44,22 @@ if gpus:
 
 model = tf.keras.models.load_model(args.model)
 
-def train_val_data(file_dirs, label):
-    train_list, val_list = train_val_split(file_dirs) #, num_train, num_val)
+def train_test_val_data(file_dirs, label, window):
+    train_list, test_list, val_list = train_test_val_split(file_dirs) #, num_train, num_val)
     # train_gen = SampleGeneratorFromFiles(train_list, label)
     # val_gen = SampleGeneratorFromFiles(val_list, label)
-    train_set =  tf.data.Dataset.from_generator(data_generation, args=[train_list, label], output_signature=(tf.TensorSpec(shape=(8000,1), dtype=tf.float32), tf.TensorSpec(shape=(), dtype=tf.int16))) 
-    val_set =  tf.data.Dataset.from_generator(data_generation, args=[train_list, label], output_signature=(tf.TensorSpec(shape=(8000,1), dtype=tf.float32), tf.TensorSpec(shape=(), dtype=tf.int16))) 
-    return train_set, val_set
+    train_set =  tf.data.Dataset.from_generator(data_generation, args=[train_list, label, window], output_signature=(tf.TensorSpec(shape=(window,1), dtype=tf.float32), tf.TensorSpec(shape=(), dtype=tf.int16))) 
+    val_set =  tf.data.Dataset.from_generator(data_generation, args=[val_list, label, window], output_signature=(tf.TensorSpec(shape=(window,1), dtype=tf.float32), tf.TensorSpec(shape=(), dtype=tf.int16))) 
+    test_set =  tf.data.Dataset.from_generator(data_generation, args=[test_list, label, window], output_signature=(tf.TensorSpec(shape=(window,1), dtype=tf.float32), tf.TensorSpec(shape=(), dtype=tf.int16))) 
+    return train_set, val_set, test_set
 
-def sample_data(pos_train, neg_train, pos_val, neg_val, batch_size, num_train, num_val, ratio):
+def sample_data(pos_train, neg_train, pos_val, neg_val, pos_test, neg_test, batch_size, num_train, num_val, ratio):
 
     train_dataset =  tf.data.experimental.sample_from_datasets([pos_train, neg_train], weights=[ratio, (1 - ratio)]).take(num_train).batch(batch_size).repeat()
     val_dataset =  tf.data.experimental.sample_from_datasets([pos_val, neg_val], weights=[ratio, (1 - ratio)]).take(num_val).batch(batch_size).repeat()
+    test_dataset =  tf.data.experimental.sample_from_datasets([pos_test, neg_test], weights=[ratio, (1 - ratio)]).take(num_val).batch(batch_size).repeat()
 
-    return train_dataset, val_dataset
+    return train_dataset, val_dataset, test_dataset
 
 
 def train_model(train_dataset, val_dataset, model, epoch_steps, val_steps, logs):
@@ -102,6 +105,12 @@ def train_model(train_dataset, val_dataset, model, epoch_steps, val_steps, logs)
 
     return fit
 
+def testing(test_dataset, model, threshold):
+    loss, acc = model.evaluate(test_dataset)
+    predictions- model.predict(test_dataset)
+    preds = (predictions >= threshold.astype("int32"))
+    # preds.tolist()
+    return preds
 # train_list, val_list = train_val_split(args.posdirs)
 # gen = data_generation(val_list, 1)
 # for i in gen:
@@ -115,7 +124,15 @@ def train_model(train_dataset, val_dataset, model, epoch_steps, val_steps, logs)
 #         if counter > 10:
 #             break
 
-pos_train, pos_val = train_val_data(args.posdirs, 1)
-neg_train, neg_val = train_val_data(args.negdirs, 0)
-train_dataset, val_dataset = sample_data(pos_train, neg_train, pos_val, neg_val, args.batchsize, args.trainreads, args.valreads, args.ratio)
+pos_train, pos_val, pos_test = train_test_val_data(args.posdirs, 1, args.window)
+neg_train, neg_val, neg_test = train_test_val_data(args.negdirs, 0, args.window)
+train_dataset, val_dataset, test_dataset = sample_data(pos_train, neg_train, pos_val, neg_val, pos_test, neg_test, args.batchsize, args.trainreads, args.valreads, args.ratio)
 fit = train_model(train_dataset, val_dataset, model, epoch_steps, val_steps, args.logs)
+test_preds = testing(test_dataset, model, args.threshold)
+
+counter = 0
+for i in range(test_preds):
+    counter += 1
+    print(i)
+    if counter > 10:
+        break

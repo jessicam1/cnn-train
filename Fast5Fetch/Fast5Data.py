@@ -9,28 +9,31 @@ from tensorflow import keras
 from scipy import stats
 
 
-def train_val_split(file_dirs): #, num_train, num_val):
+def train_test_val_split(file_dirs): #, num_train, num_val):
     total_list = []
     train_list = []
+    test_list = []
     val_list = []
     for directory in file_dirs:
         path = Path(directory)
         for afile in path.rglob("*.fast5"):
             # total_list.append(str(afile))
             rand_num = random.random()
-            if rand_num < 0.2:
+            if rand_num < 0.1:
                 val_list.append(str(afile))
+            if rand_num >= 0.1 and rand_num < 0.2:
+                test_list.append(str(afile))
             else:
                 train_list.append(str(afile))
     random.shuffle(train_list)
+    random.shuffle(test_list)
     random.shuffle(val_list)
     # random.shuffle(total_list)
     # train_list = total_list[0 : num_train : 1]
     # val_list = total_list[num_train+1 : num_train+num_val+1 : 1] 
-    return train_list, val_list
+    return train_list, test_list, val_list
 
-def data_generation(file_list, label, shuffle=True):
-    window = 8000
+def data_generation(file_list, label, window, shuffle=True):
     if shuffle==True:
         random.shuffle(file_list)
     for i in range(len(file_list)):
