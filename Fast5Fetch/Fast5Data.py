@@ -8,6 +8,20 @@ import tensorflow as tf
 from tensorflow import keras
 from scipy import stats
 
+def lib_file_list(file_dirs):
+    file_list = []
+    read_list = []
+    for directory in file_dirs:
+        path = Path(directory)
+        for afile in path.rglob("*.fast5"):
+            file_list.append(str(afile))
+    random.shuffle(file_list)
+    for i in range(len(file_list)):
+        with get_fast5_file(sample_file, mode='r') as f5:
+            sample_file = file_list[i]
+            for read in f5.get_reads():
+                read_list.append(str(read))
+    return file_list, read_list
 
 def train_test_val_split(file_dirs): #, num_train, num_val):
     total_list = []
@@ -33,7 +47,23 @@ def train_test_val_split(file_dirs): #, num_train, num_val):
     # val_list = total_list[num_train+1 : num_train+num_val+1 : 1] 
     return train_list, test_list, val_list
 
-def data_generation(file_list, label, window, shuffle=True):
+def data_generation(file_list, window, shuffle=True):
+    # for generating x (data) without labels -- for predicting
+    if shuffle==True:
+        random.shuffle(file_list)
+    for i in range(len(file_list)):
+        sample_file = file_list[i]
+        with get_fast5_file(sample_file, mode='r') as f5:
+            for read in f5.get_reads():
+                whole_sample = np.asarray(read.get_raw_data(scale=True))
+                start_col = random.randint(1000, (len(whole_sample)-window))
+                sample = whole_sample[start_col:start_col+window:1]
+                norm_sample = stats.zscore(sample) # .asarray()
+                x = norm_sample.reshape((norm_sample.shape[0], 1))
+                yield x  
+
+def data_and_label_generation(file_list, label, window, shuffle=True):
+    # for generating x,y (data and labels) -- for training, testing
     if shuffle==True:
         random.shuffle(file_list)
     for i in range(len(file_list)):

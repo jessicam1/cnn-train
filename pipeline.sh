@@ -26,6 +26,7 @@ python neuralnets/src/train.py \
 	--negdirs $neg_dirs \
 	--trainreads 300000 \
 	--valreads 10000 \
+	--testreads 10000 \ 
 	--window 4000 \
 	--ratio 0.3 \
 	--threshold 0.5 \
