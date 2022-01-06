@@ -22,14 +22,14 @@ neg_dirs=(
 echo ">>>TRAINING MODEL<<<"
 python neuralnets/src/train.py \
 	--model $model \
-	--posdirs $pos_dirs \
-	--negdirs $neg_dirs \
-	--trainreads 1000 \
-	--valreads 10000 \
-	--testreads 10000 \
-	--window 4000 \
+	--posdirs ${pos_dirs[@]} \
+	--negdirs ${neg_dirs[@]} \
+	--trainreads 2 \
+	--valreads 10 \
+	--testreads 10 \
+	--window 10 \
 	--ratio 0.3 \
 	--threshold 0.5 \
-	--batchsize 32 \
+	--batchsize 2 \
 	--gpulim 4096 \
-
+	--store_csv neuralnets/src/temp/
