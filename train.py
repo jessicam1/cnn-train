@@ -5,6 +5,7 @@ train a neural network model.
 """
 
 import sys
+import time
 import random
 import argparse
 import numpy as np
@@ -71,35 +72,43 @@ def main():
                 args.ratio)
 
     if args.store_csv != '':
-        store_csv(train_ds, val_ds, test_ds, args.store_csv)
+        store_csv(train_ds, val_ds, test_ds, args.window, args.store_csv)
         sys.exit(0)
 
     # if args.from_csv != '':
         # train_ds, val_ds, test_ds = dataset_from_csv() #FIXME
 
     # Train the model
-    train_model(train_ds, val_ds, model, epoch_steps, val_steps, args.logs)
+    # train_model(train_ds, val_ds, model, epoch_steps, val_steps, args.logs)
 
     # test_preds = testing(test_dataset, model, args.threshold)
     # tf.data.experimental.save(train_dataset, "neuralnets/src/train_dataset.csv", compression="gzip")
 
 
-def store_csv(train_ds, val_ds, test_ds, path):
-    store_single_csv(train_ds, path + '/train.csv')
-    # store_single_csv(val_ds, path + '/val.csv')
-    # store_single_csv(test_ds, path + '/test.csv')
+def store_csv(train_ds, val_ds, test_ds, window, path):
+    store_single_csv(train_ds, window, path + '/train.csv')
+    store_single_csv(val_ds, window, path + '/val.csv')
+    store_single_csv(test_ds, window, path + '/test.csv')
 
 
-def store_single_csv(ds, csv_file):
-    for x, y in ds:
-        for i in range(len(x)): # each i is one read
-            read = x.numpy()[i] 
-            # grab one read from batch and turn each signal into np array
-            raw_data = [str(num[0]) for num in read] 
-            label = str(y.numpy()[i])
-            # take label from one read, convert to numpy, convert to to string
-            print("\t".join([*raw_data, label]))
-            # join all signals and label from one read
+def store_single_csv(ds, window, csv_file):
+    t0 = time.time()
+    with open(csv_file, "w") as csv:
+        col_array = np.arange(0, window+1, 1)
+        cols = [str(num) for num in col_array]
+        csv.write("\t".join([*cols, "label"]) + "\n")
+        for x, y in ds:
+            for i in range(len(x)): # each i is one read
+                read = x.numpy()[i] 
+                # grab one read from batch and turn each signal into np array
+                raw_data = [str(num[0]) for num in read] 
+                label = str(y.numpy()[i])
+                # take label from one read, convert to numpy, convert to to string
+                #print("\t".join([*raw_data, label]))
+                csv.write("\t".join([*raw_data, label]) + "\n")
+                # join all signals and label from one read
+    t1=time.time()
+    print(t1 - t0, file=sys.stderr)
 
 def limit_gpu(gpu_id, gpu_mem_lim):
     try:
