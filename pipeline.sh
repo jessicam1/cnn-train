@@ -1,6 +1,6 @@
 #/bin/bash
 
-model="neuralnets/mycnn/models/test_4kseq_short_model300k" 
+model="neuralnets/mycnn/models/test_4kseq_model/"
 mkdir -p "$model"
 logsdir="neuralnets/mycnn/tblogs/"
 mkdir -p "$logsdir"
@@ -14,22 +14,23 @@ neg_dirs=(
 	"exp/K562_5EU_0_unlabeled_II_run/guppy/"
 	"exp/K562_5EU_0_unlabeled_III_run/guppy/"
 )
+seqlength=4000
 
-
-# echo ">>>CREATING MODEL<<<"
-# python neuralnets/mycnn/src/cnn_structure.py -m $model
+echo ">>>CREATING MODEL<<<"
+python neuralnets/src/cnn_structure.py \
+	--model $model \
+	--seqlength $seqlength
 
 echo ">>>TRAINING MODEL<<<"
 python neuralnets/src/train.py \
 	--model $model \
 	--posdirs ${pos_dirs[@]} \
 	--negdirs ${neg_dirs[@]} \
-	--trainreads 2 \
-	--valreads 10 \
+	--trainreads 400000 \
+	--valreads 5000 \
 	--testreads 10 \
-	--window 10 \
+	--window $seqlength \
 	--ratio 0.3 \
 	--threshold 0.5 \
-	--batchsize 2 \
-	--gpulim 4096 \
-	--store_csv neuralnets/src/temp/
+	--batchsize 32 \
+	--gpulim 4096
