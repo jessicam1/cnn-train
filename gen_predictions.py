@@ -21,14 +21,10 @@ def parse_args(args):
             help="length of window to use when sampling raw signal")
     parser.add_argument("-b", "--batchsize", default=32, type=int,
             help="predictions batchsize; ensure same as batchsize model was trained")
-    # parser.add_argument("-s", "--savefile",
-    #         help="name of tabfile to save predictions to")
     parser.add_argument("-t", "--threshold", default=0.5, type=float,
             help="sigmoid threshold value")
     parser.add_argument("-g", "--gpulim", default=4096, type=int,
             help="gpu memory limit in mb")
-    # parser.add_argument("-n", "--numreads", type=int,
-    #       help="number of read-ids to load and get predictions for")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="verbose model")
     return parser.parse_args(args)
@@ -62,13 +58,12 @@ def build_ds_from_gen(library, window, batchsize, CPUS):
             args=[fast5s, window, True, CPUS],
             output_signature=(tf.TensorSpec(shape=(),
                 dtype=tf.string),
-                tf.TensorSpec(shape=(window,1), dtype=tf.float32)))# .take(90)
-
+                tf.TensorSpec(shape=(window,1), dtype=tf.float32)))
 
     row = [0] * window
     row_read = ["foo"]
     dummy_rows = []
-    dummy_reads = []     
+    dummy_reads = []
     for i in range(batchsize):
         dummy_rows = np.append(dummy_rows, row, axis=0)
         dummy_reads.append(row_read)
@@ -76,7 +71,8 @@ def build_ds_from_gen(library, window, batchsize, CPUS):
             shape=[batchsize, window, 1])
     dummy_reads_tf = tf.constant(dummy_reads, dtype=tf.string,
             shape=[batchsize,])
-    dummy_ds = tf.data.Dataset.from_tensor_slices((dummy_reads_tf, dummy_rows_tf))
+    dummy_ds = tf.data.Dataset.from_tensor_slices((
+        dummy_reads_tf, dummy_rows_tf))
 
     gen_ds = gen_ds.concatenate(dummy_ds)
 
@@ -84,19 +80,16 @@ def build_ds_from_gen(library, window, batchsize, CPUS):
 
 def readids_and_predictions(gen_ds, model, batchsize, window):
     i = 0
-    # batch = []
     batch = np.empty([32, window, 1])
     readids = []
     for readid, x in gen_ds:
         if i < batchsize:
-            # batch = np.append(batch, x.numpy().reshape([1, window, 1]), axis=0)
             batch[i,:] = x.numpy().reshape([1, window, 1])
             i += 1
-            # batch = np.asarray(batch).reshape([1, window, 1]) 
             readids.append(readid)
         if i == batchsize:
             preds = model.predict(batch)
-            for j in range(len(batch)-1): #range(len(batch)-1)
+            for j in range(len(batch)-1):
                 print("\t".join([readids[j].numpy().decode("utf-8"),
                     str(preds[j][0])]))
             batch = np.empty([32, window, 1])
@@ -106,9 +99,3 @@ def readids_and_predictions(gen_ds, model, batchsize, window):
 
 if __name__ == "__main__":
     main()
-
-# gen_ds = build_ds_from_gen(args.library, args.window, CPUS)
-#
-# for readid, x in gen_ds:
-#     pred = model.predict(x)
-#     print(readid, pred)
