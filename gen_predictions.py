@@ -32,7 +32,7 @@ def main():
 
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
-        limit_gpu(gpus[0], 4096)
+        limit_gpu(gpus[0], args.gpulim)
 
     model = tf.keras.models.load_model(args.model)
 
@@ -41,7 +41,7 @@ def main():
     gen = readid_x_generator_many_wrapper(
             fast5s, args.window, CPUS)
 
-    readids_and_predictions(gen, model, args.window)
+    readids_and_predictions(gen, model, args.window, args.threshold)
 
     # Alternatively we can use a dataset. This is more complex therefore not
     # preferred.
@@ -65,14 +65,15 @@ def limit_gpu(gpu_id, gpu_mem_lim):
         print(err)
 
 
-def readids_and_predictions(gen, model, window):
+def readids_and_predictions(gen, model, window, threshold):
     for read_id, x in gen:
         # Reshape because the model expects a 3D input. The 1st dimension is
         # supposed to be the batch. However it doesn't have to match the
         # training batch size.
         x = x.reshape(1, window, 1)
         pred = model.predict(x)
-        print("\t".join([read_id, str(pred[0][0])]))
+        prediction = (pred >= threshold).astype("int32")
+        print("\t".join([read_id, str(pred[0][0]), str(prediction[0][0])]))
 
 
 # def readids_and_predictions_from_ds(ds, model, window):
